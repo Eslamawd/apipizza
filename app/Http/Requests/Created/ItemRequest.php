@@ -18,7 +18,7 @@ class ItemRequest extends FormRequest
             'description' => 'required|string',
             'price' => 'required|numeric|min:0',
             'old_price' => 'nullable|numeric|min:0',
-            'image' => 'required|image|mimes:jpg,jpeg,png|max:2048',
+            'image' => 'required|image|mimes:jpg,jpeg,png|max:5120',
             'category_id' => 'required|exists:categories,id',
         ];
     }
