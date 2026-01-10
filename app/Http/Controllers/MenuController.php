@@ -20,7 +20,7 @@ class MenuController extends Controller
            $validated = $request->validate([
             'name' => 'required|string|max:255',
             'restaurant_id' => 'required|exists:restaurants,id',
-            'image' => 'nullable|image|max:2048|mimes:jpeg,png,jpg,gif,svg',
+            'image' => 'nullable|image|max:5120|mimes:jpeg,png,jpg,gif,svg',
         ]);
 
 
