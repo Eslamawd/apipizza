@@ -21,6 +21,7 @@ class ItemOptionController extends Controller
             'name' => 'required|string|max:255',
             'price' => 'required|numeric',
             'option_type' => 'required|string',
+            'half' => 'sometimes|boolean',
             'item_id' => 'required|exists:items,id',
         ]);
 
@@ -44,6 +45,7 @@ class ItemOptionController extends Controller
         $validated = $request->validate([
             'name' => 'sometimes|string|max:255',
             'price' => 'sometimes|numeric',
+            'half' => 'sometimes|boolean',
             'option_type' => 'sometimes|string',
         ]);
 

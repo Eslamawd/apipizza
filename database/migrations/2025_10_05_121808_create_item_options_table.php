@@ -18,6 +18,7 @@ return new class extends Migration
             $table->string('name_en');
             $table->decimal('price');
             $table->string('option_type')->default('topping');
+            $table->boolean('half')->default(false);
             $table->unsignedBigInteger('item_id');
             $table->foreign('item_id')->references('id')->on('items')->onDelete('cascade');
             $table->timestamps();

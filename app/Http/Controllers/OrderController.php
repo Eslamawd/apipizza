@@ -65,28 +65,25 @@ class OrderController extends Controller
 
         return response()->json($orders);
     }
-    
-   public function store(Request $request)
+    public function store(Request $request)
 {
-    // 1. إنشاء الطلب الأساسي (مبدئياً بسعر 0 لحد ما نحسب محتوياته)
+    // 1. التحقق من البيانات
     $request->validate([
         'restaurant_id' => 'required|exists:restaurants,id',
         'table_id'      => 'nullable|exists:tables,id',
-        'phone'         => 'nullable|string|max:20',
-        'address'       => 'nullable|string|max:255',
-        'latitude'      => 'nullable|numeric',
-        'longitude'     => 'nullable|numeric',
         'items'         => 'required|array|min:1',
         'items.*.item_id'   => 'required|exists:items,id',
         'items.*.quantity'  => 'required|integer|min:1',
-        'items.*.options'   => 'nullable|array',
-        'items.*.options.*' => 'exists:item_options,id',
-        'items.*.comment'   => 'nullable|string|max:500',
+        // التعديل: الاوبشنز أصبحت مصفوفة أوبجكتس تحتوي على id و position
+        'items.*.options'            => 'nullable|array',
+        'items.*.options.*.id'       => 'required|exists:item_options,id',
+        'items.*.options.*.position' => 'required|in:whole,right,left', 
     ]);
+
     $order = Order::create([
         'restaurant_id' => $request->restaurant_id,
-        'table_id'      => $request->table_id ?: null, // هينزل null لو دليفري
-        'user_id'       => auth()->id() ?: null,      // لو السيستم فيه تسجيل دخول
+        'table_id'      => $request->table_id ?: null,
+        'user_id'       => auth()->id() ?: null,
         'phone'         => $request->phone,
         'address'       => $request->address,
         'latitude'      => $request->latitude,
@@ -100,11 +97,25 @@ class OrderController extends Controller
     foreach ($request->items as $itemData) {
         $item = Item::findOrFail($itemData['item_id']);
         
-        // جلب أسعار الإضافات المختارة من قاعدة البيانات مباشرة للأمان
-        $selectedOptions = \App\Models\ItemOption::whereIn('id', $itemData['options'] ?? [])->get();
-        $optionsSum = $selectedOptions->sum('price');
+        $optionsSum = 0;
+        $optionsToSave = [];
 
-        // سعر الصنف الواحد = السعر الأساسي + سعر الإضافات
+        // 2. معالجة الإضافات وحساب سعرها بناءً على النوع
+        if (!empty($itemData['options'])) {
+            foreach ($itemData['options'] as $optionData) {
+                $option = \App\Models\ItemOption::find($optionData['id']);
+                
+                // حساب السعر: لو نص يمين أو شمال ممكن تحسب نص السعر (اختياري)
+                // هنا سنحسب السعر كامل كما هو في الكود الأصلي
+                $optionsSum += $option->price;
+
+                $optionsToSave[] = [
+                    'item_option_id' => $option->id,
+                    'position'       => $optionData['position']
+                ];
+            }
+        }
+
         $unitPrice = $item->price + $optionsSum;
         $subtotal = $unitPrice * $itemData['quantity'];
 
@@ -117,29 +128,28 @@ class OrderController extends Controller
             'subtotal' => $subtotal,
         ]);
 
-        // ربط الإضافات بالـ OrderItem
-        foreach ($selectedOptions as $option) {
+        // 3. تخزين الإضافات مع الـ position الخاص بكل واحدة
+        foreach ($optionsToSave as $opt) {
             OrderItemOption::create([
                 'order_item_id'  => $orderItem->id,
-                'item_option_id' => $option->id,
+                'item_option_id' => $opt['item_option_id'],
+                'position'       => $opt['position'], // القيمة من الـ UI
             ]);
         }
 
         $orderTotal += $subtotal;
     }
 
-    // 2. تحديث إجمالي الطلب النهائي في الـ Order
     $order->update(['total_price' => $orderTotal]);
 
-    // 3. تحميل البيانات كاملة للإشعار (Eager Loading)
+    // التجهيز للإشعار
     $data = Order::with([
         'table:id,name',
         'restaurant:id,name',
         'orderItems.item',
-        'orderItems.options'
+        'orderItems.options' // تأكد أن العلاقة في موديل OrderItem اسمها options
     ])->find($order->id);
 
-    // 🔔 إشعار واحد للمطبخ/الكاشير
     SendNewOrderNotification::dispatch($data);
 
     return response()->json($data, 201);

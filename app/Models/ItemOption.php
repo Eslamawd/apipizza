@@ -15,6 +15,12 @@ class ItemOption extends Model
         'price',
         'item_id',
         'option_type',
+        'half'
+    ];
+
+    protected $casts = [
+        'half' => 'boolean',
+       
     ];
 
     public function item()

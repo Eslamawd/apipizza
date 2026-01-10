@@ -16,9 +16,6 @@ class ItemController extends Controller
     {
 
 
-  
-
-
         $translator = new GoogleTranslate('en');
         $data = $request->validated();
            // ✅ رفع الصورة وتخزين مسارها

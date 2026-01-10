@@ -1,7 +1,6 @@
 <?php 
 use App\Http\Controllers\ItemController;
 use App\Http\Middleware\AdminMiddleware;
-use App\Http\Middleware\VerifyUserMakeItems;
 use Illuminate\Support\Facades\Route;
 
 Route::middleware(['auth:sanctum', AdminMiddleware::class])->group(function () {

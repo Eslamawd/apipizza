@@ -11,6 +11,7 @@ class OrderItemOption extends Model
 
     protected $fillable = [
         'order_item_id',
+        'position',
         'item_option_id',
     ];
 
@@ -21,6 +22,6 @@ class OrderItemOption extends Model
 
     public function option()
     {
-        return $this->belongsTo(ItemOption::class, 'item_option_id');
+        return $this->belongsTo(ItemOption::class, 'item_option_id')->withPivot('position');
     }
 }

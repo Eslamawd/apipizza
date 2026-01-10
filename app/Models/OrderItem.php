@@ -30,6 +30,6 @@ class OrderItem extends Model
 
     public function options()
     {
-        return $this->belongsToMany(ItemOption::class, 'order_item_options');
+        return $this->belongsToMany(ItemOption::class, 'order_item_options')->withPivot('position');
     }
 }

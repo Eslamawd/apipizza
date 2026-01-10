@@ -222,7 +222,7 @@ public function getResOrdRevCount()
     $user = auth()->user();
 
     // ✅ تحقق من وجود مطاعم للمستخدم
-    if ($user->restaurants()->count() === 0) {
+    if (Restaurant::all()->count() === 0) {
         return response()->json([
             'restaurants_count' => 0,
             'orders_count' => 0,
@@ -235,7 +235,7 @@ public function getResOrdRevCount()
     }
 
     // ✅ جميع مطاعم المستخدم
-    $restaurants = $user->restaurants;
+    $restaurants = Restaurant::all();
 
     // ✅ عدد المطاعم
     $restaurantsCount = $restaurants->count();
