@@ -65,16 +65,14 @@ class OrderController extends Controller
 
         return response()->json($orders);
     }
-    public function store(Request $request)
+public function store(Request $request)
 {
-    // 1. التحقق من البيانات
     $request->validate([
         'restaurant_id' => 'required|exists:restaurants,id',
         'table_id'      => 'nullable|exists:tables,id',
         'items'         => 'required|array|min:1',
         'items.*.item_id'   => 'required|exists:items,id',
         'items.*.quantity'  => 'required|integer|min:1',
-        // التعديل: الاوبشنز أصبحت مصفوفة أوبجكتس تحتوي على id و position
         'items.*.options'            => 'nullable|array',
         'items.*.options.*.id'       => 'required|exists:item_options,id',
         'items.*.options.*.position' => 'required|in:whole,right,left', 
@@ -100,14 +98,40 @@ class OrderController extends Controller
         $optionsSum = 0;
         $optionsToSave = [];
 
-        // 2. معالجة الإضافات وحساب سعرها بناءً على النوع
+        // --- خطوة هامة: تحديد الحجم المختار لهذا الصنف ---
+        $currentSizeName = "";
+        if (!empty($itemData['options'])) {
+            foreach ($itemData['options'] as $optionData) {
+                $opt = \App\Models\ItemOption::find($optionData['id']);
+                // نفترض أن الأوبشن الخاص بالحجم ينتمي لجروب اسمه 'size' أو 'Size'
+                // أو ابحث عنه بطريقة تناسب قاعدة بياناتك
+                if ($opt && strtolower($opt->option_type ?? '') === 'size') {
+                    $currentSizeName = strtolower($opt->name);
+                }
+            }
+        }
+
+        // 2. معالجة الإضافات وحساب سعرها مع الزيادة الديناميكية
         if (!empty($itemData['options'])) {
             foreach ($itemData['options'] as $optionData) {
                 $option = \App\Models\ItemOption::find($optionData['id']);
                 
-                // حساب السعر: لو نص يمين أو شمال ممكن تحسب نص السعر (اختياري)
-                // هنا سنحسب السعر كامل كما هو في الكود الأصلي
-                $optionsSum += $option->price;
+                $priceWithExtra = $option->price;
+
+                // تطبيق الزيادة فقط إذا كان الأوبشن "إضافة" (Topping/Extra)
+                // تأكد من مسمى الجروب عندك في القاعدة
+                $group = strtolower($option->option_type ?? '');
+                if ($group === 'topping' || $group === 'extra') {
+                    if ($currentSizeName === 'm' || $currentSizeName === 'medium') {
+                        $priceWithExtra += 0.25;
+                    } elseif ($currentSizeName === 'l' || $currentSizeName === 'large') {
+                        $priceWithExtra += 0.50;
+                    } elseif (str_contains($currentSizeName, 'xl')) {
+                        $priceWithExtra += 0.75;
+                    }
+                }
+
+                $optionsSum += $priceWithExtra;
 
                 $optionsToSave[] = [
                     'item_option_id' => $option->id,
@@ -128,12 +152,11 @@ class OrderController extends Controller
             'subtotal' => $subtotal,
         ]);
 
-        // 3. تخزين الإضافات مع الـ position الخاص بكل واحدة
         foreach ($optionsToSave as $opt) {
             OrderItemOption::create([
                 'order_item_id'  => $orderItem->id,
                 'item_option_id' => $opt['item_option_id'],
-                'position'       => $opt['position'], // القيمة من الـ UI
+                'position'       => $opt['position'],
             ]);
         }
 
@@ -142,12 +165,12 @@ class OrderController extends Controller
 
     $order->update(['total_price' => $orderTotal]);
 
-    // التجهيز للإشعار
+    // إعادة تحميل البيانات كاملة للإشعار
     $data = Order::with([
         'table:id,name',
         'restaurant:id,name',
         'orderItems.item',
-        'orderItems.options' // تأكد أن العلاقة في موديل OrderItem اسمها options
+        'orderItems.options'
     ])->find($order->id);
 
     SendNewOrderNotification::dispatch($data);
