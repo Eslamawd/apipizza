@@ -142,7 +142,7 @@ public function store(Request $request)
 
         $unitPrice = $item->price + $optionsSum;
         $subtotal = $unitPrice * $itemData['quantity'];
-
+       
         $orderItem = OrderItem::create([
             'order_id' => $order->id,
             'item_id'  => $item->id,
@@ -162,8 +162,15 @@ public function store(Request $request)
 
         $orderTotal += $subtotal;
     }
+// Apply Fees and Taxes
+        if ($request->filled('longitude')) {
+            $orderTotal += 5; // Shipping fee
+        }
+        
+        $tax = $orderTotal * 0.095; 
+        $finalTotal = $orderTotal + $tax;
 
-    $order->update(['total_price' => $orderTotal]);
+        $order->update(['total_price' => $finalTotal]);
 
     // إعادة تحميل البيانات كاملة للإشعار
     $data = Order::with([
