@@ -70,6 +70,11 @@ public function store(Request $request)
     $request->validate([
         'restaurant_id' => 'required|exists:restaurants,id',
         'table_id'      => 'nullable|exists:tables,id',
+        'phone'         => 'nullable|string|max:20',
+        'address'       => 'nullable|string|max:255',
+        'latitude'      => 'nullable|numeric',
+        'longitude'     => 'nullable|numeric',
+        'payment_token' => 'nullable|string',
         'items'         => 'required|array|min:1',
         'items.*.item_id'   => 'required|exists:items,id',
         'items.*.quantity'  => 'required|integer|min:1',
@@ -91,35 +96,23 @@ public function store(Request $request)
     ]);
 
     $orderTotal = 0;
-
     foreach ($request->items as $itemData) {
         $item = Item::findOrFail($itemData['item_id']);
-        
         $optionsSum = 0;
         $optionsToSave = [];
-
-        // --- خطوة هامة: تحديد الحجم المختار لهذا الصنف ---
         $currentSizeName = "";
         if (!empty($itemData['options'])) {
             foreach ($itemData['options'] as $optionData) {
                 $opt = \App\Models\ItemOption::find($optionData['id']);
-                // نفترض أن الأوبشن الخاص بالحجم ينتمي لجروب اسمه 'size' أو 'Size'
-                // أو ابحث عنه بطريقة تناسب قاعدة بياناتك
                 if ($opt && strtolower($opt->option_type ?? '') === 'size') {
                     $currentSizeName = strtolower($opt->name);
                 }
             }
         }
-
-        // 2. معالجة الإضافات وحساب سعرها مع الزيادة الديناميكية
         if (!empty($itemData['options'])) {
             foreach ($itemData['options'] as $optionData) {
                 $option = \App\Models\ItemOption::find($optionData['id']);
-                
                 $priceWithExtra = $option->price;
-
-                // تطبيق الزيادة فقط إذا كان الأوبشن "إضافة" (Topping/Extra)
-                // تأكد من مسمى الجروب عندك في القاعدة
                 $group = strtolower($option->option_type ?? '');
                 if ($group === 'topping' || $group === 'extra') {
                     if ($currentSizeName === 'm' || $currentSizeName === 'medium') {
@@ -130,19 +123,15 @@ public function store(Request $request)
                         $priceWithExtra += 0.75;
                     }
                 }
-
                 $optionsSum += $priceWithExtra;
-
                 $optionsToSave[] = [
                     'item_option_id' => $option->id,
                     'position'       => $optionData['position']
                 ];
             }
         }
-
         $unitPrice = $item->price + $optionsSum;
         $subtotal = $unitPrice * $itemData['quantity'];
-       
         $orderItem = OrderItem::create([
             'order_id' => $order->id,
             'item_id'  => $item->id,
@@ -151,7 +140,6 @@ public function store(Request $request)
             'price'    => $unitPrice,
             'subtotal' => $subtotal,
         ]);
-
         foreach ($optionsToSave as $opt) {
             OrderItemOption::create([
                 'order_item_id'  => $orderItem->id,
@@ -159,18 +147,40 @@ public function store(Request $request)
                 'position'       => $opt['position'],
             ]);
         }
-
         $orderTotal += $subtotal;
     }
-// Apply Fees and Taxes
-        if ($request->filled('longitude')) {
-            $orderTotal += 5; // Shipping fee
-        }
-        
-        $tax = $orderTotal * 0.095; 
-        $finalTotal = $orderTotal + $tax;
+    // Apply Fees and Taxes
+    if ($request->filled('longitude')) {
+        $orderTotal += 5; // Shipping fee
+    }
+    $tax = $orderTotal * 0.095;
+    $finalTotal = $orderTotal + $tax;
+    $order->update(['total_price' => $finalTotal]);
 
-        $order->update(['total_price' => $finalTotal]);
+    // تنفيذ عملية السحب من كلوفر
+    $merchantId = config('services.clover.merchant_id');
+    $cloverToken = config('services.clover.token');
+    $cloverService = new \App\Services\CloverService($merchantId, $cloverToken);
+    if ($request->filled('payment_token')) {
+        $chargeResult = $cloverService->executeCharge($request->payment_token, $finalTotal);
+        $status = 'failed';
+        $transactionId = null;
+        $reason = null;
+        if ($chargeResult && isset($chargeResult['id'])) {
+            $status = 'success';
+            $transactionId = $chargeResult['id'];
+        } elseif ($chargeResult && isset($chargeResult['reason'])) {
+            $reason = $chargeResult['reason'];
+        }
+        \App\Models\Payment::create([
+            'order_id' => $order->id,
+            'transaction_id' => $transactionId,
+            'payment_token' => $request->payment_token,
+            'status' => $status,
+            'reason' => $reason,
+            'amount' => $finalTotal,
+        ]);
+    }
 
     // إعادة تحميل البيانات كاملة للإشعار
     $data = Order::with([

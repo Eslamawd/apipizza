@@ -44,6 +44,11 @@ return [
     'url'       => env('WEBSOCKET_URL'),
     'token'     => env('WEBSOCKET_TOKEN'),
     ],
+    'clover' => [
+    'base_url' => env('CLOVER_BASE_URL'),
+    'token' => env('CLOVER_TOKEN'),
+    'merchant_id' => env('CLOVER_MERCHANT_ID'),
+],
 
 
 
