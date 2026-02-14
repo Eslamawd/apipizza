@@ -161,23 +161,53 @@ public function store(Request $request)
     $merchantId = config('services.clover.merchant_id');
     $cloverToken = config('services.clover.token');
     $cloverService = new \App\Services\CloverService($merchantId, $cloverToken);
+    $paymentStatus = 'not_required';
+    $paymentMessage = 'Order created successfully.';
+    $transactionId = null;
+
     if ($request->filled('payment_token')) {
+        $paymentStatus = 'failed';
         $chargeResult = $cloverService->executeCharge($request->payment_token, $finalTotal);
-        $status = 'failed';
-        $transactionId = null;
-        $reason = null;
-        if ($chargeResult && isset($chargeResult['id'])) {
-            $status = 'success';
-            $transactionId = $chargeResult['id'];
-        } elseif ($chargeResult && isset($chargeResult['reason'])) {
-            $reason = $chargeResult['reason'];
+        $transactionId = $chargeResult['transaction_id'] ?? null;
+
+        if (!$transactionId) {
+            $reason = $chargeResult['reason']
+                ?? 'Payment failed';
+            $reasonLower = strtolower($reason);
+            $insufficientFunds = str_contains($reasonLower, 'insufficient')
+                || str_contains($reasonLower, 'over limit')
+                || str_contains($reasonLower, 'issuer_declined');
+            $paymentMessage = $insufficientFunds
+                ? 'Payment failed: insufficient funds. Order has been cancelled.'
+                : 'Payment failed. Order has been cancelled.';
+
+            $orderSnapshot = [
+                'id' => $order->id,
+                'restaurant_id' => $order->restaurant_id,
+                'table_id' => $order->table_id,
+                'total_price' => $finalTotal,
+                'status' => 'cancelled',
+            ];
+
+            $order->delete();
+
+            return response()->json([
+                'payment_status' => $paymentStatus,
+                'message' => $paymentMessage,
+                'reason' => $reason,
+                'order' => $orderSnapshot,
+            ], 402);
         }
+
+        $paymentStatus = 'success';
+        $paymentMessage = 'Payment completed successfully.';
+
         \App\Models\Payment::create([
             'order_id' => $order->id,
             'transaction_id' => $transactionId,
             'payment_token' => $request->payment_token,
-            'status' => $status,
-            'reason' => $reason,
+            'status' => 'success',
+            'reason' => null,
             'amount' => $finalTotal,
         ]);
     }
@@ -192,7 +222,12 @@ public function store(Request $request)
 
     SendNewOrderNotification::dispatch($data);
 
-    return response()->json($data, 201);
+    return response()->json([
+        'payment_status' => $paymentStatus,
+        'message' => $paymentMessage,
+        'transaction_id' => $transactionId,
+        'order' => $data,
+    ], 201);
 }
     public function updateStatus(Request $request, $id)
     {
