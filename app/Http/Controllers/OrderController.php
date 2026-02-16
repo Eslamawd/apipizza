@@ -81,6 +81,7 @@ public function store(Request $request)
         'items.*.options'            => 'nullable|array',
         'items.*.options.*.id'       => 'required|exists:item_options,id',
         'items.*.options.*.position' => 'required|in:whole,right,left', 
+        'order_type' => 'required|in:pickup,delivery,pickup',
     ]);
 
     $order = Order::create([
@@ -93,6 +94,7 @@ public function store(Request $request)
         'longitude'     => $request->longitude,
         'total_price'   => 0, 
         'status'        => 'pending',
+        'order_type'    => $request->order_type,
     ]);
 
     $orderTotal = 0;
@@ -150,7 +152,7 @@ public function store(Request $request)
         $orderTotal += $subtotal;
     }
     // Apply Fees and Taxes
-    if ($request->filled('longitude')) {
+    if ($request->order_type === 'delivery') {
         $orderTotal += 5; // Shipping fee
     }
     $tax = $orderTotal * 0.095;
