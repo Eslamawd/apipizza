@@ -175,17 +175,11 @@ public function store(Request $request)
 
         if (!$chargeResult['success']) {
             $reason = $chargeResult['reason'] ?? 'Payment failed';
-            $reasonLower = strtolower($reason);
-
+            
             // Friendly error messages based on decline code
             $userFriendlyMessage = $this->getPaymentErrorMessage($declineCode, $reason);
 
-            // Mark order as failed instead of deleting
-            $order->update([
-                'status' => 'failed',
-                'payment_status' => 'failed',
-            ]);
-
+            // حفظ سجل الدفع الفاشل (قبل حذف الـ order)
             \App\Models\Payment::create([
                 'order_id' => $order->id,
                 'transaction_id' => null,
@@ -197,17 +191,25 @@ public function store(Request $request)
                 'amount' => $finalTotal,
             ]);
 
+            // احفظ بيانات الـ order قبل الحذف (للرد)
+            $orderSnapshot = [
+                'id' => $order->id,
+                'restaurant_id' => $order->restaurant_id,
+                'table_id' => $order->table_id,
+                'total_price' => $finalTotal,
+                'items_count' => $order->orderItems()->count(),
+            ];
+
+            // احذف الـ order (سجل الـ payment يبقى موجود)
+            $order->delete();
+
             return response()->json([
                 'payment_status' => 'failed',
                 'message' => $userFriendlyMessage,
                 'reason' => $reason,
                 'error_code' => $errorCode,
                 'decline_code' => $declineCode,
-                'order' => [
-                    'id' => $order->id,
-                    'status' => 'failed',
-                    'total_price' => $finalTotal,
-                ],
+                'order' => $orderSnapshot,
             ], 402);
         }
 
