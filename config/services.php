@@ -46,6 +46,7 @@ return [
     ],
     'clover' => [
     'base_url' => env('CLOVER_BASE_URL'),
+    'ecom_base_url' => env('CLOVER_ECOM_BASE_URL'),
     'token' => env('CLOVER_TOKEN'),
     'merchant_id' => env('CLOVER_MERCHANT_ID'),
 ],

@@ -9,12 +9,14 @@ use Throwable;
 class CloverService
 {
     protected $baseUrl;
+    protected $ecomBaseUrl;
     protected $token;
     protected $merchantId;
 
     public function __construct($merchantId, $restaurantToken = null)
     {
         $this->baseUrl = config('services.clover.base_url');
+        $this->ecomBaseUrl = config('services.clover.ecom_base_url') ?: $this->baseUrl;
         $this->token = $restaurantToken ?? config('services.clover.token');
         $this->merchantId = $merchantId;
     }
@@ -142,7 +144,7 @@ class CloverService
 
     protected function getChargeAttempts(string $paymentToken, int $amountInCents): array
     {
-        $primaryUrl = rtrim($this->baseUrl, '/') . '/v1/charges';
+        $primaryUrl = rtrim($this->ecomBaseUrl, '/') . '/v1/charges';
         $merchantChargeUrl = rtrim($this->baseUrl, '/') . "/v3/merchants/{$this->merchantId}/charges";
 
         return [
