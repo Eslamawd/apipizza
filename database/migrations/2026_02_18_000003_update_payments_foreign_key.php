@@ -17,9 +17,20 @@ return new class extends Migration
             $table->unsignedBigInteger('order_id')->nullable()->change();
         });
 
-        // Then, modify the foreign key constraint
+        // Drop existing foreign key if it exists
         Schema::table('payments', function (Blueprint $table) {
-            $table->dropForeign(['order_id']);
+            $sm = Schema::getConnection()->getDoctrineSchemaManager();
+            $indexesDetail = $sm->listTableForeignKeys('payments');
+            
+            foreach ($indexesDetail as $foreignKey) {
+                if ($foreignKey->getLocalColumns()[0] === 'order_id') {
+                    $table->dropForeign(['order_id']);
+                }
+            }
+        });
+
+        // Add new foreign key with SET NULL
+        Schema::table('payments', function (Blueprint $table) {
             $table->foreign('order_id')
                 ->references('id')
                 ->on('orders')
@@ -33,11 +44,15 @@ return new class extends Migration
     public function down(): void
     {
         Schema::table('payments', function (Blueprint $table) {
-            $table->dropForeign(['order_id']);
-            $table->foreign('order_id')
-                ->references('id')
-                ->on('orders')
-                ->onDelete('cascade');
+            $sm = Schema::getConnection()->getDoctrineSchemaManager();
+            $indexesDetail = $sm->listTableForeignKeys('payments');
+            
+            foreach ($indexesDetail as $foreignKey) {
+                if ($foreignKey->getLocalColumns()[0] === 'order_id') {
+                    $table->dropForeign(['order_id']);
+                }
+            }
+            
             $table->unsignedBigInteger('order_id')->nullable(false)->change();
         });
     }
