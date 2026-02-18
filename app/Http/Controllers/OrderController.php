@@ -161,48 +161,64 @@ public function store(Request $request)
 
     // تنفيذ عملية السحب من كلوفر
     $merchantId = config('services.clover.merchant_id');
-    $cloverToken = config('services.clover.token');
-    $cloverService = new \App\Services\CloverService($merchantId, $cloverToken);
+    $cloverService = new \App\Services\CloverService($merchantId);
     $paymentStatus = 'not_required';
     $paymentMessage = 'Order created successfully.';
     $transactionId = null;
 
     if ($request->filled('payment_token')) {
-        $paymentStatus = 'failed';
-        $chargeResult = $cloverService->executeCharge($request->payment_token, $finalTotal);
+        $paymentStatus = 'pending';
+        $chargeResult = $cloverService->executeCharge($request->payment_token, $finalTotal, $order->id);
         $transactionId = $chargeResult['transaction_id'] ?? null;
+        $errorCode = $chargeResult['error_code'] ?? null;
+        $declineCode = $chargeResult['decline_code'] ?? null;
 
-        if (!$transactionId) {
-            $reason = $chargeResult['reason']
-                ?? 'Payment failed';
+        if (!$chargeResult['success']) {
+            $reason = $chargeResult['reason'] ?? 'Payment failed';
             $reasonLower = strtolower($reason);
-            $insufficientFunds = str_contains($reasonLower, 'insufficient')
-                || str_contains($reasonLower, 'over limit')
-                || str_contains($reasonLower, 'issuer_declined');
-            $paymentMessage = $insufficientFunds
-                ? 'Payment failed: insufficient funds. Order has been cancelled.'
-                : 'Payment failed. Order has been cancelled.';
 
-            $orderSnapshot = [
-                'id' => $order->id,
-                'restaurant_id' => $order->restaurant_id,
-                'table_id' => $order->table_id,
-                'total_price' => $finalTotal,
-                'status' => 'cancelled',
-            ];
+            // Friendly error messages based on decline code
+            $userFriendlyMessage = $this->getPaymentErrorMessage($declineCode, $reason);
 
-            $order->delete();
+            // Mark order as failed instead of deleting
+            $order->update([
+                'status' => 'failed',
+                'payment_status' => 'failed',
+            ]);
+
+            \App\Models\Payment::create([
+                'order_id' => $order->id,
+                'transaction_id' => null,
+                'payment_token' => $request->payment_token,
+                'status' => 'failed',
+                'reason' => $reason,
+                'error_code' => $errorCode,
+                'decline_code' => $declineCode,
+                'amount' => $finalTotal,
+            ]);
 
             return response()->json([
-                'payment_status' => $paymentStatus,
-                'message' => $paymentMessage,
+                'payment_status' => 'failed',
+                'message' => $userFriendlyMessage,
                 'reason' => $reason,
-                'order' => $orderSnapshot,
+                'error_code' => $errorCode,
+                'decline_code' => $declineCode,
+                'order' => [
+                    'id' => $order->id,
+                    'status' => 'failed',
+                    'total_price' => $finalTotal,
+                ],
             ], 402);
         }
 
+        // Payment succeeded
         $paymentStatus = 'success';
         $paymentMessage = 'Payment completed successfully.';
+
+        $order->update([
+            'status' => 'pending',
+            'payment_status' => 'completed',
+        ]);
 
         \App\Models\Payment::create([
             'order_id' => $order->id,
@@ -210,6 +226,8 @@ public function store(Request $request)
             'payment_token' => $request->payment_token,
             'status' => 'success',
             'reason' => null,
+            'error_code' => null,
+            'decline_code' => null,
             'amount' => $finalTotal,
         ]);
     }
@@ -247,6 +265,43 @@ SendUpdateOrderNotification::dispatch(
         );
 
         return response()->json($order);
+    }
+
+    /**
+     * Get user-friendly payment error message based on decline code
+     */
+    protected function getPaymentErrorMessage(?string $declineCode, string $originalReason): string
+    {
+        $declineCode = strtolower($declineCode ?? '');
+        $reason = strtolower($originalReason);
+
+        // CVV errors
+        if (str_contains($declineCode, 'cvv') || str_contains($reason, 'cvv')) {
+            return 'Payment failed: Invalid CVV. Please check your card details.';
+        }
+
+        // Card declined
+        if (str_contains($declineCode, 'issuer_decli') || str_contains($reason, 'declined')) {
+            return 'Payment failed: Your card was declined. Please try another card.';
+        }
+
+        // Insufficient funds
+        if (str_contains($reason, 'insufficient') || str_contains($reason, 'over limit')) {
+            return 'Payment failed: Insufficient funds. Please check your account balance.';
+        }
+
+        // Expired card
+        if (str_contains($reason, 'expired') || str_contains($reason, 'expir')) {
+            return 'Payment failed: Card has expired. Please use a valid card.';
+        }
+
+        // Generic decline
+        if (str_contains($declineCode, 'decli') || str_contains($reason, 'decline')) {
+            return 'Payment failed: Your card issuer declined this transaction.';
+        }
+
+        // Default message
+        return 'Payment failed. Please try again or use a different payment method.';
     }
 
 

@@ -145,7 +145,6 @@ class CloverService
     protected function getChargeAttempts(string $paymentToken, int $amountInCents): array
     {
         $primaryUrl = rtrim($this->ecomBaseUrl, '/') . '/v1/charges';
-        $merchantChargeUrl = rtrim($this->baseUrl, '/') . "/v3/merchants/{$this->merchantId}/charges";
 
         return [
             [
@@ -154,13 +153,6 @@ class CloverService
                     'amount' => $amountInCents,
                     'source' => $paymentToken,
                     'currency' => 'usd',
-                ],
-            ],
-            [
-                'url' => $merchantChargeUrl,
-                'payload' => [
-                    'amount' => $amountInCents,
-                    'token' => $paymentToken,
                 ],
             ],
         ];
