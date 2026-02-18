@@ -53,19 +53,27 @@ class CloverService
 
                 if ($response->successful()) {
                     $responseData = $response->json();
+                    if (!is_array($responseData)) {
+                        $responseData = [];
+                    }
+
+                    $transactionId = $responseData['id'] ?? null;
+                    if (!$transactionId && $response->status() === 204) {
+                        $transactionId = $this->extractChargeIdFromHeaders($response);
+                    }
 
                     Log::info('Clover charge request succeeded', [
                         'merchant_id' => $this->merchantId,
                         'amount_cents' => $amountInCents,
                         'status_code' => $response->status(),
-                        'response_id' => $responseData['id'] ?? null,
+                        'response_id' => $transactionId,
                         'attempt' => $index + 1,
                         'url' => $attempt['url'],
                     ]);
 
                     return [
                         'success' => true,
-                        'transaction_id' => $responseData['id'] ?? null,
+                        'transaction_id' => $transactionId,
                         'status_code' => $response->status(),
                         'reason' => null,
                         'error_code' => null,
@@ -157,6 +165,33 @@ class CloverService
         }
 
         return substr($value, 0, 3) . str_repeat('*', $length - 6) . substr($value, -3);
+    }
+
+    protected function extractChargeIdFromHeaders($response): ?string
+    {
+        $headerCandidates = [
+            'X-Clover-Charge-Id',
+            'X-Clover-Request-Id',
+            'X-Request-Id',
+            'Location',
+        ];
+
+        foreach ($headerCandidates as $header) {
+            $value = $response->header($header);
+            if (!$value) {
+                continue;
+            }
+
+            if (stripos($header, 'Location') !== false) {
+                if (preg_match('/charges\/([a-zA-Z0-9_-]+)/', $value, $matches)) {
+                    return $matches[1];
+                }
+            }
+
+            return $value;
+        }
+
+        return null;
     }
 
     // يمكنك إضافة المزيد من الميثودز حسب الحاجة (getOrder, updateOrder, ...)
