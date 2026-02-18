@@ -3,6 +3,7 @@
 use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;
+use Illuminate\Support\Facades\DB;
 
 return new class extends Migration
 {
@@ -11,9 +12,13 @@ return new class extends Migration
      */
     public function up(): void
     {
-        // Modify payments table to set order_id nullable on delete
+        // First, make order_id nullable
         Schema::table('payments', function (Blueprint $table) {
-            // Drop old foreign key and recreate with onDelete('set null')
+            $table->unsignedBigInteger('order_id')->nullable()->change();
+        });
+
+        // Then, modify the foreign key constraint
+        Schema::table('payments', function (Blueprint $table) {
             $table->dropForeign(['order_id']);
             $table->foreign('order_id')
                 ->references('id')
@@ -33,6 +38,7 @@ return new class extends Migration
                 ->references('id')
                 ->on('orders')
                 ->onDelete('cascade');
+            $table->unsignedBigInteger('order_id')->nullable(false)->change();
         });
     }
 };
