@@ -62,6 +62,17 @@ class CloverService
                         $transactionId = $this->extractChargeIdFromHeaders($response);
                     }
 
+                    if (!$transactionId && $response->status() === 204) {
+                        Log::info('Clover charge response headers', [
+                            'merchant_id' => $this->merchantId,
+                            'status_code' => $response->status(),
+                            'header_x_clover_charge_id' => $response->header('X-Clover-Charge-Id'),
+                            'header_x_clover_request_id' => $response->header('X-Clover-Request-Id'),
+                            'header_x_request_id' => $response->header('X-Request-Id'),
+                            'header_location' => $response->header('Location'),
+                        ]);
+                    }
+
                     Log::info('Clover charge request succeeded', [
                         'merchant_id' => $this->merchantId,
                         'amount_cents' => $amountInCents,
