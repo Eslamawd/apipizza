@@ -78,6 +78,7 @@ public function store(Request $request)
         'items'         => 'required|array|min:1',
         'items.*.item_id'   => 'required|exists:items,id',
         'items.*.quantity'  => 'required|integer|min:1',
+        'items.*.comment'   => 'nullable|string|max:255',
         'items.*.options'            => 'nullable|array',
         'items.*.options.*.id'       => 'required|exists:item_options,id',
         'items.*.options.*.position' => 'required|in:whole,right,left', 
