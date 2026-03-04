@@ -74,6 +74,12 @@ public function store(Request $request)
         'address'       => 'nullable|string|max:255',
         'latitude'      => 'nullable|numeric',
         'longitude'     => 'nullable|numeric',
+        'customer_name' => 'nullable|string|max:100',
+        'tip_percentage'=> 'nullable|numeric|min:0|max:100',
+        'tips'          => 'nullable|numeric|min:0',
+        'scheduled_date'=> 'nullable|date',
+        'scheduled_time'=> 'nullable|date_format:H:i',
+        'scheduled_for' => 'nullable|date',
         'payment_token' => 'nullable|string',
         'items'         => 'required|array|min:1',
         'items.*.item_id'   => 'required|exists:items,id',
@@ -93,6 +99,12 @@ public function store(Request $request)
         'address'       => $request->address,
         'latitude'      => $request->latitude,
         'longitude'     => $request->longitude,
+        'customer_name' => $request->customer_name,
+        'tip_percentage'=> $request->tip_percentage,
+        'tips'          => $request->tips,
+        'scheduled_date'=> $request->scheduled_date,
+        'scheduled_time'=> $request->scheduled_time,
+        'scheduled_for' => $request->scheduled_for,
         'total_price'   => 0, 
         'status'        => 'pending',
         'order_type'    => $request->order_type,
@@ -157,7 +169,8 @@ public function store(Request $request)
         $orderTotal += 5; // Shipping fee
     }
     $tax = $orderTotal * 0.095;
-    $finalTotal = $orderTotal + $tax;
+    $tips = (float) ($request->tips ?? 0);
+    $finalTotal = $orderTotal + $tax + $tips;
     $order->update(['total_price' => $finalTotal]);
 
     // تنفيذ عملية السحب من كلوفر

@@ -1,8 +1,6 @@
 <?php
 
 use Illuminate\Database\Migrations\Migration;
-use Illuminate\Database\Schema\Blueprint;
-use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Facades\DB;
 
 return new class extends Migration
@@ -12,30 +10,27 @@ return new class extends Migration
      */
     public function up(): void
     {
-        // First, make order_id nullable
-        Schema::table('payments', function (Blueprint $table) {
-            $table->unsignedBigInteger('order_id')->nullable()->change();
-        });
+        $database = DB::getDatabaseName();
 
-        // Drop existing foreign key if it exists
-        Schema::table('payments', function (Blueprint $table) {
-            $sm = Schema::getConnection()->getDoctrineSchemaManager();
-            $indexesDetail = $sm->listTableForeignKeys('payments');
-            
-            foreach ($indexesDetail as $foreignKey) {
-                if ($foreignKey->getLocalColumns()[0] === 'order_id') {
-                    $table->dropForeign(['order_id']);
-                }
-            }
-        });
+        $foreignKeys = DB::select(
+            'SELECT CONSTRAINT_NAME FROM information_schema.KEY_COLUMN_USAGE WHERE TABLE_SCHEMA = ? AND TABLE_NAME = ? AND COLUMN_NAME = ? AND REFERENCED_TABLE_NAME IS NOT NULL',
+            [$database, 'payments', 'order_id']
+        );
 
-        // Add new foreign key with SET NULL
-        Schema::table('payments', function (Blueprint $table) {
-            $table->foreign('order_id')
-                ->references('id')
-                ->on('orders')
-                ->onDelete('set null');
-        });
+        foreach ($foreignKeys as $foreignKey) {
+            DB::statement("ALTER TABLE payments DROP FOREIGN KEY {$foreignKey->CONSTRAINT_NAME}");
+        }
+
+        DB::statement('ALTER TABLE payments MODIFY order_id BIGINT UNSIGNED NULL');
+
+        $existingTargetFk = DB::select(
+            'SELECT CONSTRAINT_NAME FROM information_schema.KEY_COLUMN_USAGE WHERE TABLE_SCHEMA = ? AND TABLE_NAME = ? AND COLUMN_NAME = ? AND REFERENCED_TABLE_NAME = ?',
+            [$database, 'payments', 'order_id', 'orders']
+        );
+
+        if (empty($existingTargetFk)) {
+            DB::statement('ALTER TABLE payments ADD CONSTRAINT payments_order_id_foreign FOREIGN KEY (order_id) REFERENCES orders(id) ON DELETE SET NULL');
+        }
     }
 
     /**
@@ -43,17 +38,18 @@ return new class extends Migration
      */
     public function down(): void
     {
-        Schema::table('payments', function (Blueprint $table) {
-            $sm = Schema::getConnection()->getDoctrineSchemaManager();
-            $indexesDetail = $sm->listTableForeignKeys('payments');
-            
-            foreach ($indexesDetail as $foreignKey) {
-                if ($foreignKey->getLocalColumns()[0] === 'order_id') {
-                    $table->dropForeign(['order_id']);
-                }
-            }
-            
-            $table->unsignedBigInteger('order_id')->nullable(false)->change();
-        });
+        $database = DB::getDatabaseName();
+
+        $foreignKeys = DB::select(
+            'SELECT CONSTRAINT_NAME FROM information_schema.KEY_COLUMN_USAGE WHERE TABLE_SCHEMA = ? AND TABLE_NAME = ? AND COLUMN_NAME = ? AND REFERENCED_TABLE_NAME IS NOT NULL',
+            [$database, 'payments', 'order_id']
+        );
+
+        foreach ($foreignKeys as $foreignKey) {
+            DB::statement("ALTER TABLE payments DROP FOREIGN KEY {$foreignKey->CONSTRAINT_NAME}");
+        }
+
+        DB::statement('ALTER TABLE payments MODIFY order_id BIGINT UNSIGNED NOT NULL');
+        DB::statement('ALTER TABLE payments ADD CONSTRAINT payments_order_id_foreign FOREIGN KEY (order_id) REFERENCES orders(id) ON DELETE CASCADE');
     }
 };
