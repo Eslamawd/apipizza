@@ -51,6 +51,10 @@ return [
     'merchant_id' => env('CLOVER_MERCHANT_ID'),
 ],
 
+    'orders' => [
+        'notification_email' => env('ORDER_NOTIFICATION_EMAIL'),
+    ],
+
 
 
 ];

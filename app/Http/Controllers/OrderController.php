@@ -8,6 +8,7 @@ use App\Models\Order;
 use App\Models\OrderItem;
 use App\Models\OrderItemOption;
 use App\Models\Item;
+use App\Services\OrderNotificationService;
 use App\Services\WebSocketService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Http; // لو هنبعت للـ WebSocket Server
@@ -16,10 +17,12 @@ class OrderController extends Controller
 {
 
      protected $webSocket;
+     protected $orderNotificationService;
 
-    public function __construct(WebSocketService $webSocket)
+    public function __construct(WebSocketService $webSocket, OrderNotificationService $orderNotificationService)
     {
         $this->webSocket = $webSocket;
+        $this->orderNotificationService = $orderNotificationService;
     }
     public function index()
     {
@@ -257,6 +260,7 @@ public function store(Request $request)
     ])->find($order->id);
 
     SendNewOrderNotification::dispatch($data);
+    $this->orderNotificationService->sendOrderCreatedEmail($data);
 
     return response()->json([
         'payment_status' => $paymentStatus,
