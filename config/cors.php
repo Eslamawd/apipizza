@@ -1,5 +1,11 @@
 <?php
 
+$allowedOrigins = explode(',', env('CORS_ALLOWED_ORIGINS', config('app.frontend_url', 'http://localhost:3000')));
+$allowedOrigins = array_values(array_filter(array_map('trim', $allowedOrigins)));
+
+$allowedOriginPatterns = explode(',', env('CORS_ALLOWED_ORIGIN_PATTERNS', '^https?://localhost(:\\d+)?$,^https?://127\\.0\\.0\\.1(:\\d+)?$,^exp://.*$'));
+$allowedOriginPatterns = array_values(array_filter(array_map('trim', $allowedOriginPatterns)));
+
 return [
 
     /*
@@ -19,9 +25,9 @@ return [
 
     'allowed_methods' => ['*'],
 
-    'allowed_origins' => [config('app.frontend_url', 'http://localhost:3000')],
+    'allowed_origins' => $allowedOrigins,
 
-    'allowed_origins_patterns' => [],
+    'allowed_origins_patterns' => $allowedOriginPatterns,
 
     'allowed_headers' => ['*'],
 

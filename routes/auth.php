@@ -8,11 +8,18 @@ use App\Models\User;
 use Illuminate\Http\Request; 
 use Illuminate\Support\Facades\Route;
 
+Route::prefix('mobile')->group(function () {
+    Route::post('/register', [AuthController::class, 'registerMobile']);
+    Route::post('/login', [AuthController::class, 'loginMobile']);
+});
+
 
 Route::middleware(['auth:sanctum'])->group(function () {
 
       Route::post('/logout', [AuthController::class, 'logout']);
       Route::get('/user', [AuthController::class, 'user']);
+    Route::get('/cashier/context', [AuthController::class, 'cashierContext']);
+    Route::get('/kitchen/context', [AuthController::class, 'kitchenContext']);
       Route::get('/wallet/balance', [WalletController::class, 'balance']);
 
           Route::get('/email/verify', function () {
@@ -32,6 +39,11 @@ Route::middleware(['auth:sanctum'])->group(function () {
         return response()->json(['message' => 'Verification link sent!']);
     })->name('verification.send');
 
+});
+
+Route::middleware(['auth:sanctum'])->prefix('mobile')->group(function () {
+    Route::post('/logout', [AuthController::class, 'logout']);
+    Route::get('/user', [AuthController::class, 'user']);
 });
 
 

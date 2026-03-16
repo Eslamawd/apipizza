@@ -12,7 +12,14 @@ return new class extends Migration
      */
     public function up(): void
     {
-        // Make order_id nullable using raw SQL (safe approach)
+        if (DB::getDriverName() === 'sqlite') {
+            Schema::table('payments', function (Blueprint $table) {
+                $table->unsignedBigInteger('order_id')->nullable()->change();
+            });
+
+            return;
+        }
+
         DB::statement('ALTER TABLE payments MODIFY order_id BIGINT UNSIGNED NULL');
     }
 
@@ -21,7 +28,14 @@ return new class extends Migration
      */
     public function down(): void
     {
-        // Revert back to NOT NULL
+        if (DB::getDriverName() === 'sqlite') {
+            Schema::table('payments', function (Blueprint $table) {
+                $table->unsignedBigInteger('order_id')->nullable(false)->change();
+            });
+
+            return;
+        }
+
         DB::statement('ALTER TABLE payments MODIFY order_id BIGINT UNSIGNED NOT NULL');
     }
 };

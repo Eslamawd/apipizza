@@ -2,6 +2,7 @@
 
 use Illuminate\Database\Migrations\Migration;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Schema;
 
 return new class extends Migration
 {
@@ -10,6 +11,14 @@ return new class extends Migration
      */
     public function up(): void
     {
+        if (DB::getDriverName() === 'sqlite') {
+            Schema::table('payments', function ($table) {
+                $table->unsignedBigInteger('order_id')->nullable()->change();
+            });
+
+            return;
+        }
+
         $database = DB::getDatabaseName();
 
         $foreignKeys = DB::select(
@@ -41,6 +50,14 @@ return new class extends Migration
      */
     public function down(): void
     {
+        if (DB::getDriverName() === 'sqlite') {
+            Schema::table('payments', function ($table) {
+                $table->unsignedBigInteger('order_id')->nullable(false)->change();
+            });
+
+            return;
+        }
+
         $database = DB::getDatabaseName();
 
         $foreignKeys = DB::select(

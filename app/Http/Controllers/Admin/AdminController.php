@@ -22,7 +22,7 @@ class AdminController extends Controller
     {
         // تحقق من الدور
         $request->validate([
-            'role' => 'required|in:admin,user',
+            'role' => 'required|in:admin,user,cashier,kitchen',
         ]);
 
         $user = User::findOrFail($id);
