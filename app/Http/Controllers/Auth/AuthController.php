@@ -149,16 +149,30 @@ public function cashierContext(Request $request)
 {
     $user = $request->user();
 
-    if (! $user || ! $user->hasRole('cashier')) {
-        return response()->json(['message' => 'Forbidden. Cashier role required.'], 403);
+    if (! $user || ! ($user->hasRole('cashier') || $user->hasRole('admin'))) {
+        return response()->json(['message' => 'Forbidden. Cashier or admin role required.'], 403);
     }
 
-    $restaurant = Restaurant::with('cashiers')
-        ->where('user_id', $user->id)
-        ->first();
+    $validated = $request->validate([
+        'restaurant_id' => 'nullable|integer|exists:restaurants,id',
+    ]);
+
+    $selectedRestaurantId = $validated['restaurant_id'] ?? null;
+
+    $restaurantQuery = Restaurant::with('cashiers');
+
+    if ($user->hasRole('admin')) {
+        if ($selectedRestaurantId) {
+            $restaurantQuery->where('id', $selectedRestaurantId);
+        }
+    } else {
+        $restaurantQuery->where('user_id', $user->id);
+    }
+
+    $restaurant = $restaurantQuery->first();
 
     if (! $restaurant) {
-        return response()->json(['message' => 'No restaurant found for this cashier account.'], 404);
+        return response()->json(['message' => 'No restaurant found for this cashier context.'], 404);
     }
 
     $cashier = $restaurant->cashiers->first();
@@ -170,7 +184,7 @@ public function cashierContext(Request $request)
     return response()->json([
         'cashier_id' => $cashier->id,
         'restaurant_id' => $restaurant->id,
-        'user_id' => $user->id,
+        'user_id' => $restaurant->user_id,
         'token' => $cashier->token,
     ]);
 }
@@ -179,16 +193,30 @@ public function kitchenContext(Request $request)
 {
     $user = $request->user();
 
-    if (! $user || ! $user->hasRole('kitchen')) {
-        return response()->json(['message' => 'Forbidden. Kitchen role required.'], 403);
+    if (! $user || ! ($user->hasRole('kitchen') || $user->hasRole('admin'))) {
+        return response()->json(['message' => 'Forbidden. Kitchen or admin role required.'], 403);
     }
 
-    $restaurant = Restaurant::with('kitchens')
-        ->where('user_id', $user->id)
-        ->first();
+    $validated = $request->validate([
+        'restaurant_id' => 'nullable|integer|exists:restaurants,id',
+    ]);
+
+    $selectedRestaurantId = $validated['restaurant_id'] ?? null;
+
+    $restaurantQuery = Restaurant::with('kitchens');
+
+    if ($user->hasRole('admin')) {
+        if ($selectedRestaurantId) {
+            $restaurantQuery->where('id', $selectedRestaurantId);
+        }
+    } else {
+        $restaurantQuery->where('user_id', $user->id);
+    }
+
+    $restaurant = $restaurantQuery->first();
 
     if (! $restaurant) {
-        return response()->json(['message' => 'No restaurant found for this kitchen account.'], 404);
+        return response()->json(['message' => 'No restaurant found for this kitchen context.'], 404);
     }
 
     $kitchen = $restaurant->kitchens->first();
@@ -200,7 +228,7 @@ public function kitchenContext(Request $request)
     return response()->json([
         'kitchen_id' => $kitchen->id,
         'restaurant_id' => $restaurant->id,
-        'user_id' => $user->id,
+        'user_id' => $restaurant->user_id,
         'token' => $kitchen->token,
     ]);
 }
