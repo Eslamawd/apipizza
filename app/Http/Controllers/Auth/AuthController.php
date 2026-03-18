@@ -239,4 +239,25 @@ public function kitchenContext(Request $request)
     return response()->json(['user' => new UserResource($request->user())]);
 }
 
+    public function updateMobilePushToken(Request $request)
+    {
+        $user = $request->user();
+
+        if (! $user) {
+            return response()->json(['message' => 'Unauthenticated.'], 401);
+        }
+
+        $validated = $request->validate([
+            'push_token' => 'required|string|max:512',
+            'platform' => 'nullable|string|max:32',
+        ]);
+
+        $user->forceFill([
+            'mobile_push_token' => $validated['push_token'],
+            'mobile_push_platform' => $validated['platform'] ?? null,
+        ])->save();
+
+        return response()->json(['message' => 'Push token updated']);
+    }
+
 }

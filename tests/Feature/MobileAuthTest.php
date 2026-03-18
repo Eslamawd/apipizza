@@ -46,3 +46,22 @@ it('revokes the current mobile token on logout', function () {
         'id' => $tokenId,
     ]);
 });
+
+it('stores mobile push token for authenticated user', function () {
+    $user = User::factory()->create();
+    $token = $user->createToken('pest-suite')->plainTextToken;
+
+    $this->withHeader('Authorization', 'Bearer '.$token)
+        ->postJson('/api/mobile/push-token', [
+            'push_token' => 'fcm_test_token_123',
+            'platform' => 'expo-android',
+        ])
+        ->assertOk()
+        ->assertJsonPath('message', 'Push token updated');
+
+    $this->assertDatabaseHas('users', [
+        'id' => $user->id,
+        'mobile_push_token' => 'fcm_test_token_123',
+        'mobile_push_platform' => 'expo-android',
+    ]);
+});
