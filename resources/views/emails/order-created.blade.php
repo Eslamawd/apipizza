@@ -129,6 +129,29 @@
                                         <div class="label">Customer</div>
                                         <div class="value">{{ $order->customer_name ?? 'N/A' }}</div>
                                     </td>
+                                    <td style="padding:6px 0;">
+                                        <div class="label">Address</div>
+                                        <div class="value">{{ $order->address ?? 'N/A' }}</div>
+                                    </td>
+                                    <td style="padding:6px 0;">
+                                        <div class="label">Phone</div>
+                                        <div class="value">{{ $order->phone ?? 'N/A' }}</div>
+                                    </td>
+                                  <td style="padding:6px 0;">
+                                <div class="label">Location Order</div>
+                                @if(!empty($order->latitude) && !empty($order->longitude))
+                                <a
+                                    href="https://www.google.com/maps/search/?api=1&query={{ $order->latitude }},{{ $order->longitude }}"
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    style="font-size:13px; color:#f97316; text-decoration:underline;"
+                                >
+                                    Map
+                                </a>
+                                @else
+                                <span style="color:#a59dc4;">N/A</span>
+                                @endif
+                                </td>
                                 </tr>
                             </table>
                         </div>

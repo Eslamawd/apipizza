@@ -27,3 +27,4 @@ class OrderCreatedMail extends Mailable
             ]);
     }
 }
+
