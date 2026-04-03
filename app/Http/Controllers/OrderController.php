@@ -94,7 +94,7 @@ public function store(Request $request)
         'items.*.options'            => 'nullable|array',
         'items.*.options.*.id'       => 'required|exists:item_options,id',
         'items.*.options.*.position' => 'required|in:whole,right,left', 
-        'order_type' => 'required|in:pickup,delivery,pickup',
+        'order_type' => 'required|in:pickup,delivery',
     ]);
 
     $order = Order::create([
@@ -111,14 +111,19 @@ public function store(Request $request)
         'scheduled_date'=> $request->scheduled_date,
         'scheduled_time'=> $request->scheduled_time,
         'scheduled_for' => $request->scheduled_for,
+        'subtotal_price' => 0,
+        'discount_amount'=> 0,
+        'discount_percentage' => 0,
         'total_price'   => 0, 
         'status'        => 'pending',
         'order_type'    => $request->order_type,
     ]);
 
-    $orderTotal = 0;
+    $subtotalBeforeDiscount = 0;
+    $discountTotal = 0;
+    $subtotalAfterDiscount = 0;
     foreach ($request->items as $itemData) {
-        $item = Item::findOrFail($itemData['item_id']);
+        $item = Item::with(['category.menu'])->findOrFail($itemData['item_id']);
         $optionsSum = 0;
         $optionsToSave = [];
         $currentSizeName = "";
@@ -152,14 +157,19 @@ public function store(Request $request)
             }
         }
         $unitPrice = $item->price + $optionsSum;
-        $subtotal = $unitPrice * $itemData['quantity'];
+        $lineSubtotalBeforeDiscount = $unitPrice * $itemData['quantity'];
+        $categoryDiscount = (float) ($item->category->discount_percentage ?? 0);
+        $menuDiscount = (float) ($item->category->menu->discount_percentage ?? 0);
+        $appliedDiscountPercentage = $categoryDiscount > 0 ? $categoryDiscount : $menuDiscount;
+        $lineDiscountAmount = $lineSubtotalBeforeDiscount * ($appliedDiscountPercentage / 100);
+        $lineSubtotalAfterDiscount = $lineSubtotalBeforeDiscount - $lineDiscountAmount;
         $orderItem = OrderItem::create([
             'order_id' => $order->id,
             'item_id'  => $item->id,
             'comment'  => $itemData['comment'] ?? null,
             'quantity' => $itemData['quantity'],
             'price'    => $unitPrice,
-            'subtotal' => $subtotal,
+            'subtotal' => $lineSubtotalAfterDiscount,
         ]);
         foreach ($optionsToSave as $opt) {
             OrderItemOption::create([
@@ -168,16 +178,28 @@ public function store(Request $request)
                 'position'       => $opt['position'],
             ]);
         }
-        $orderTotal += $subtotal;
+        $subtotalBeforeDiscount += $lineSubtotalBeforeDiscount;
+        $discountTotal += $lineDiscountAmount;
+        $subtotalAfterDiscount += $lineSubtotalAfterDiscount;
     }
+
+    $orderSubtotal = $subtotalAfterDiscount;
     // Apply Fees and Taxes
     if ($request->order_type === 'delivery') {
-        $orderTotal += 5; // Shipping fee
+        $orderSubtotal += 5; // Shipping fee
     }
-    $tax = $orderTotal * 0.095;
+    $tax = $orderSubtotal * 0.095;
     $tips = (float) ($request->tips ?? 0);
-    $finalTotal = $orderTotal + $tax + $tips;
-    $order->update(['total_price' => $finalTotal]);
+    $finalTotal = $orderSubtotal + $tax + $tips;
+    $effectiveDiscountPercentage = $subtotalBeforeDiscount > 0
+        ? ($discountTotal / $subtotalBeforeDiscount) * 100
+        : 0;
+    $order->update([
+        'subtotal_price' => $subtotalBeforeDiscount,
+        'discount_amount' => $discountTotal,
+        'discount_percentage' => $effectiveDiscountPercentage,
+        'total_price' => $finalTotal,
+    ]);
 
     // تنفيذ عملية السحب من كلوفر
     $merchantId = config('services.clover.merchant_id');

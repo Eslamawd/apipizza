@@ -13,6 +13,11 @@ class Category extends Model
         'name',
         'name_en',
         'menu_id',
+        'discount_percentage',
+    ];
+
+    protected $casts = [
+        'discount_percentage' => 'float',
     ];
 
     public function menu()

@@ -20,6 +20,7 @@ class MenuController extends Controller
            $validated = $request->validate([
             'name' => 'required|string|max:255',
             'restaurant_id' => 'required|exists:restaurants,id',
+            'discount_percentage' => 'nullable|numeric|min:0|max:100',
             'image' => 'nullable|image|max:5120|mimes:jpeg,png,jpg,gif,svg',
         ]);
 
@@ -37,6 +38,7 @@ class MenuController extends Controller
             'name' => $validated['name'],
             'name_en' => $translatedName,
             'restaurant_id' => $validated['restaurant_id'],
+            'discount_percentage' => $validated['discount_percentage'] ?? 0,
             'image' => $validated['image'] ?? null
         ]);
         return response()->json($menu, 201);
@@ -54,6 +56,7 @@ class MenuController extends Controller
         
            $validated = $request->validate([
             'name' => 'required|string|max:255',
+            'discount_percentage' => 'nullable|numeric|min:0|max:100',
             'image' => 'nullable|image|max:2048|mimes:jpeg,png,jpg,gif,svg',
         ]);
         if ($request->hasFile('image')) {
@@ -72,7 +75,8 @@ class MenuController extends Controller
         $translatedName = $translator->translate($validated['name']);
         $menu->update([
             'name' => $validated['name'],
-            'image' => $validated['image'],
+            'discount_percentage' => $validated['discount_percentage'] ?? $menu->discount_percentage,
+            'image' => $validated['image'] ?? $menu->getRawOriginal('image'),
             'name_en' => $translatedName,
         ]);
         return response()->json($menu);

@@ -12,7 +12,12 @@ class Menu extends Model
         'name',
         'name_en',
         'image',
+        'discount_percentage',
         'restaurant_id',
+    ];
+
+    protected $casts = [
+        'discount_percentage' => 'float',
     ];
 
     public function restaurant()

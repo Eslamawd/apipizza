@@ -14,6 +14,7 @@ class CategoryController extends Controller
         $validated = $request->validate([
             'name' => 'required|string|max:255',
             'menu_id' => 'required|exists:menus,id',
+            'discount_percentage' => 'nullable|numeric|min:0|max:100',
         ]);
 
         // ✅ ترجمة الاسم تلقائيًا إلى الإنجليزية
@@ -25,6 +26,7 @@ class CategoryController extends Controller
             'name' => $validated['name'],
             'name_en' => $translatedName,
             'menu_id' => $validated['menu_id'],
+            'discount_percentage' => $validated['discount_percentage'] ?? 0,
         ]);
 
         return response()->json($category, 201);
@@ -40,6 +42,7 @@ class CategoryController extends Controller
         $validated = $request->validate([
             'name' => 'sometimes|string|max:255',
             'menu_id' => 'sometimes|exists:menus,id',
+            'discount_percentage' => 'sometimes|numeric|min:0|max:100',
         ]);
 
         if (isset($validated['name'])) {

@@ -10,6 +10,9 @@ class Order extends Model
     use HasFactory;
 
     protected $fillable = [
+        'subtotal_price',
+        'discount_amount',
+        'discount_percentage',
         'total_price',
         'status',
         'order_type',
@@ -27,6 +30,15 @@ class Order extends Model
         'latitude',
         'longitude',
         'table_id',
+    ];
+
+    protected $casts = [
+        'subtotal_price' => 'float',
+        'discount_amount' => 'float',
+        'discount_percentage' => 'float',
+        'total_price' => 'float',
+        'tip_percentage' => 'float',
+        'tips' => 'float',
     ];
 
     public function restaurant()
