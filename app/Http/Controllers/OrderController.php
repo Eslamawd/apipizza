@@ -10,7 +10,6 @@ use App\Models\OrderItemOption;
 use App\Models\Item;
 use App\Services\OrderNotificationService;
 use App\Services\WebSocketService;
-use App\Services\FirebasePushService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Http; // لو هنبعت للـ WebSocket Server
 
@@ -19,13 +18,11 @@ class OrderController extends Controller
 
      protected $webSocket;
      protected $orderNotificationService;
-     protected $firebasePushService;
 
-    public function __construct(WebSocketService $webSocket, OrderNotificationService $orderNotificationService, FirebasePushService $firebasePushService)
+    public function __construct(WebSocketService $webSocket, OrderNotificationService $orderNotificationService)
     {
         $this->webSocket = $webSocket;
         $this->orderNotificationService = $orderNotificationService;
-        $this->firebasePushService = $firebasePushService;
     }
     public function index()
     {
@@ -210,7 +207,7 @@ public function store(Request $request)
 
     if ($request->filled('payment_token')) {
         $paymentStatus = 'pending';
-        $chargeResult = $cloverService->executeCharge($request->payment_token, $finalTotal, $order->id);
+        $chargeResult = $cloverService->executeCharge($request->payment_token, $finalTotal);
         $transactionId = $chargeResult['transaction_id'] ?? null;
         $errorCode = $chargeResult['error_code'] ?? null;
         $declineCode = $chargeResult['decline_code'] ?? null;
@@ -286,17 +283,6 @@ public function store(Request $request)
 
     SendNewOrderNotification::dispatch($data);
     $this->orderNotificationService->sendOrderCreatedEmail($data);
-    $this->firebasePushService->notifyRestaurantOrder(
-        (int) $order->restaurant_id,
-        'New order',
-        'Order #'.$order->id.' needs attention.',
-        [
-            'order_id' => (string) $order->id,
-            'restaurant_id' => (string) $order->restaurant_id,
-            'event' => 'new_order',
-            'target' => 'kitchen_cashier',
-        ]
-    );
 
     return response()->json([
         'payment_status' => $paymentStatus,
@@ -318,19 +304,6 @@ SendUpdateOrderNotification::dispatch(
             $order->id, 
             $order->restaurant_id, 
             $order->status // 👈 المتغير المفقود
-        );
-
-        $this->firebasePushService->notifyRestaurantOrder(
-            (int) $order->restaurant_id,
-            'Order update',
-            'Order #'.$order->id.' updated to '.$order->status.'.',
-            [
-                'order_id' => (string) $order->id,
-                'restaurant_id' => (string) $order->restaurant_id,
-                'status' => (string) $order->status,
-                'event' => 'order_updated',
-                'target' => 'kitchen_cashier',
-            ]
         );
 
         return response()->json($order);
