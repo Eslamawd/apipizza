@@ -61,8 +61,9 @@ class MenuController extends Controller
         ]);
         if ($request->hasFile('image')) {
             // حذف الصورة القديمة إذا كانت موجودة
-            if ($menu->image && \Storage::disk('public')->exists($menu->image)) {
-                \Storage::disk('public')->delete($menu->image);
+            $oldImagePath = $menu->getRawOriginal('image');
+            if ($oldImagePath && \Storage::disk('public')->exists($oldImagePath)) {
+                \Storage::disk('public')->delete($oldImagePath);
             }
             
             $validated['image'] = $request->file('image')->store('menu', 'public');
@@ -84,9 +85,9 @@ class MenuController extends Controller
 
     public function destroy(Menu $menu)
     {
-  
-         if ($menu->image && \Storage::disk('public')->exists($menu->image)) {
-                \Storage::disk('public')->delete($menu->image);
+          $imagePath = $menu->getRawOriginal('image');
+          if ($imagePath && \Storage::disk('public')->exists($imagePath)) {
+              \Storage::disk('public')->delete($imagePath);
           }
 
         $menu->delete();
