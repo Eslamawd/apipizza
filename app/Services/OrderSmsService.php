@@ -30,6 +30,7 @@ class OrderSmsService
             $message = $this->buildOrderMessage($order);
 
             // إرسال الرسالة عن طريق Twilio
+
             $this->twilio->messages->create(
                 $phoneNumber,
                 [
@@ -98,8 +99,7 @@ class OrderSmsService
         $total = (float) $order->total_price;
 
         // بناء الرسالة
-        $message = "🍕 Order Confirmation\n";
-        $message .= "================\n\n";
+        $message = "Order PIZZA & GYRO\n";
         $message .= "Items Ordered:\n";
         $message .= $itemsList;
         $message .= "\n================\n";
@@ -115,9 +115,7 @@ class OrderSmsService
             $message .= "Delivery Fee: \${$deliveryFee}\n";
         }
 
-        $message .= "================\n";
         $message .= "Total: \${$total}\n";
-        $message .= "================\n\n";
         $message .= "Thank you for your order! 🙏";
 
         return $message;
