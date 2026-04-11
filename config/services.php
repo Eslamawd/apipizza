@@ -39,7 +39,9 @@ return [
     'sid'        => env('TWILIO_SID'),
     'token'      => env('TWILIO_AUTH_TOKEN'),
     'verify_sid' => env('TWILIO_VERIFY_SID'),
+    'phone_number' => env('TWILIO_PHONE_NUMBER'),
     ],
+    
     'websocket' => [
     'url'       => env('WEBSOCKET_URL'),
     'token'     => env('WEBSOCKET_TOKEN'),
