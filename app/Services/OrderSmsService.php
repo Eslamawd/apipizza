@@ -100,10 +100,6 @@ class OrderSmsService
 
         // بناء الرسالة
         $message = "Order PIZZA & GYRO\n";
-        $message .= "Items Ordered:\n";
-        $message .= $itemsList;
-        $message .= "\n================\n";
-        $message .= "Subtotal: \${$subtotal}\n";
 
         if ($discount > 0) {
             $message .= "Discount: -\${$discount}\n";
@@ -116,7 +112,7 @@ class OrderSmsService
         }
 
         $message .= "Total: \${$total}\n";
-        $message .= "Thank you for your order! 🙏";
+        $message .= "Thank you for your order";
 
         return $message;
     }
