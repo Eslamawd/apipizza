@@ -71,8 +71,8 @@
             <td class="padding-mobile" style="padding:30px; color:#e6e0f8; line-height:1.8; font-size:15px;">
               <p style="margin:0 0 15px 0;">شكراً لتواصلك معنا في <strong>QREGY</strong>.</p>
               <p style="margin:0 0 15px 0;">تم الاشتراك في الباقة بنجاح: <strong>{{ $sub->plan }}</strong></p>
-              <p style="margin:0 0 15px 0;">الباقة مفعلة من تاريخ: <strong>{{ optional($sub->start_date)->format('Y-m-d H:i') }}</strong></p>
-              <p style="margin:0 0 15px 0;">وتنتهي في تاريخ: <strong>{{ optional($sub->end_date)->format('Y-m-d H:i') }}</strong></p>
+              <p style="margin:0 0 15px 0;">الباقة مفعلة من تاريخ: <strong>{{ optional($sub->start_date)->format('Y-m-d h:i A') }}</strong></p>
+              <p style="margin:0 0 15px 0;">وتنتهي في تاريخ: <strong>{{ optional($sub->end_date)->format('Y-m-d h:i A') }}</strong></p>
               <p style="margin:0 0 15px 0;">السعر: <strong>{{ $sub->price }}</strong></p>
               <p style="margin:0;">نتمنى لك تجربة رائعة معنا 🌟</p>
             </td>

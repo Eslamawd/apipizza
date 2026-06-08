@@ -35,7 +35,22 @@ class OrderController extends Controller
     }
 
     public function show(Order $order) {
-    return response()->json($order);
+        return response()->json($order);
+    }
+
+    public function downloadInvoicePdf(Order $order)
+    {
+        $html = view('pdf.order-invoice', compact('order'))->render();
+
+        $dompdf = new Dompdf();
+        $dompdf->loadHtml($html);
+        $dompdf->setPaper('A4', 'portrait');
+        $dompdf->render();
+
+        return response($dompdf->output(), 200, [
+            'Content-Type' => 'application/pdf',
+            'Content-Disposition' => 'inline; filename="order-'. $order->id .'-invoice.pdf"',
+        ]);
     }
 
     public function getByKitchen(Request $request)

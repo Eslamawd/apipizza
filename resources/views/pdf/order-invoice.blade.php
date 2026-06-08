@@ -30,10 +30,7 @@
         <div class="invoice-header">
             <h1>فاتورة طلب رقم #{{ $order->id }}</h1>
             <div class="meta">
-                <p>تاريخ الطلب: {{ optional($order->created_at)->format('Y-m-d H:i') ?? 'N/A' }}</p>
-                <p>حالة الطلب: {{ ucfirst($order->status ?? 'N/A') }}</p>
-            </div>
-        </div>
+                <p>تاريخ الطلب: {{ optional($order->created_at)->format('Y-m-d h:i A') ?? 'N/A' }}</p>
 
         <div class="section summary-card">
             <p><strong>المطعم:</strong> {{ $order->restaurant->name ?? 'N/A' }}</p>

@@ -249,7 +249,17 @@
                         </table>
 
                         <table width="100%" cellpadding="0" cellspacing="0" style="margin-top:24px;">
-                         
+                            <tr>
+                                <td align="center" style="padding:16px 0;">
+                                    <a href="{{ URL::temporarySignedRoute('orders.pdf.invoice', now()->addDays(7), ['order' => $order->id]) }}"
+                                       target="_blank"
+                                       rel="noopener noreferrer"
+                                       style="display:inline-block;background:#f97316;color:#ffffff;font-weight:700;padding:12px 22px;border-radius:8px;text-decoration:none;font-size:14px;"
+                                    >
+                                      Download PDF
+                                    </a>
+                                </td>
+                            </tr>
                         </table>
                     </td>
                 </tr>
