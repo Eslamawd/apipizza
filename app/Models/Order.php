@@ -13,6 +13,10 @@ class Order extends Model
         'subtotal_price',
         'discount_amount',
         'discount_percentage',
+        'delivery_fee',
+        'delivery_distance',
+        'tax',
+        'tips',
         'total_price',
         'status',
         'order_type',
@@ -21,7 +25,6 @@ class Order extends Model
         'phone',
         'customer_name',
         'tip_percentage',
-        'tips',
         'scheduled_date',
         'scheduled_time',
         'scheduled_for',
@@ -36,9 +39,12 @@ class Order extends Model
         'subtotal_price' => 'float',
         'discount_amount' => 'float',
         'discount_percentage' => 'float',
-        'total_price' => 'float',
+        'delivery_fee' => 'float',
+        'delivery_distance' => 'float',
+        'tax' => 'float',
         'tip_percentage' => 'float',
         'tips' => 'float',
+        'total_price' => 'float',
     ];
 
     public function restaurant()

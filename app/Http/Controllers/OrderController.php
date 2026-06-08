@@ -7,7 +7,9 @@ use App\Http\Requests\StoreOrderRequest;
 use App\Services\OrderService;
 use App\Services\OrderNotificationService;
 use App\Services\WebSocketService;
+use Dompdf\Dompdf;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
 
 class OrderController extends Controller
 {

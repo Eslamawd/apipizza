@@ -59,6 +59,22 @@ class OrderService
 
             // 2. حساب الأسعار الكاملة
             $pricing = $this->pricingService->calculatePricing($order, $itemTotals);
+
+            // إذا كانت التوصيل غير متاح للمسافة المحددة
+            if (!empty($pricing['delivery_error'])) {
+                // احذف الأوردر المؤقت
+                $order->delete();
+
+                return [
+                    'success' => false,
+                    'payment_result' => [
+                        'status' => 'error',
+                        'message' => 'Delivery not available for this address',
+                        'reason' => $pricing['delivery_error'],
+                    ],
+                ];
+            }
+
             $this->pricingService->updateOrderPrices($order, $pricing);
 
             // 3. معالجة الدفع

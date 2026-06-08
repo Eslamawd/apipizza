@@ -17,3 +17,7 @@ Route::get('/', function () {
     
 Route::post('/payment/callback', [PaymentController::class, 'callback'])
      ->withoutMiddleware([VerifyCsrfToken::class]);
+
+Route::get('/orders/{order}/invoice.pdf', [\App\Http\Controllers\OrderController::class, 'downloadInvoicePdf'])
+    ->middleware('signed')
+    ->name('orders.pdf.invoice');
