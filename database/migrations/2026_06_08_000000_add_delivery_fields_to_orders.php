@@ -12,10 +12,18 @@ return new class extends Migration
     public function up(): void
     {
         Schema::table('orders', function (Blueprint $table) {
-            $table->decimal('delivery_fee', 8, 2)->nullable()->after('discount_percentage');
-            $table->decimal('delivery_distance', 6, 2)->nullable()->after('delivery_fee');
-            $table->decimal('tax', 8, 2)->nullable()->after('delivery_distance');
-            $table->decimal('tips', 8, 2)->nullable()->after('tax');
+            if (!Schema::hasColumn('orders', 'delivery_fee')) {
+                $table->decimal('delivery_fee', 8, 2)->nullable()->after('discount_percentage');
+            }
+            if (!Schema::hasColumn('orders', 'delivery_distance')) {
+                $table->decimal('delivery_distance', 6, 2)->nullable()->after('delivery_fee');
+            }
+            if (!Schema::hasColumn('orders', 'tax')) {
+                $table->decimal('tax', 8, 2)->nullable()->after('delivery_distance');
+            }
+            if (!Schema::hasColumn('orders', 'tips')) {
+                $table->decimal('tips', 8, 2)->nullable()->after('tax');
+            }
         });
     }
 
